@@ -66,13 +66,39 @@ jobs:
           "artifact=$artifact" >> $env:GITHUB_OUTPUT
           "checksum=$checksum" >> $env:GITHUB_OUTPUT
 
+      # The windows-latest image no longer resolves through CMake's Visual Studio
+      # generator detection, so import the MSVC environment explicitly and use Ninja.
+      - name: Setup MSVC environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "vswhere not found at $vswhere"
+          }
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "Visual Studio with the C++ toolchain was not found."
+          }
+          $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+          if (-not (Test-Path $vcvars)) {
+            throw "vcvars64.bat not found at $vcvars"
+          }
+          Write-Host "Using MSVC from: $vsPath"
+          cmd /c "`"$vcvars`" >nul 2>&1 && set" | ForEach-Object {
+            $idx = $_.IndexOf('=')
+            if ($idx -gt 0) {
+              $_ | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
+
       - name: Configure CMake
         shell: pwsh
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DMICMIX_VERSION_OVERRIDE="${{ steps.meta.outputs.version }}"
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=Release -DMICMIX_VERSION_OVERRIDE="${{ steps.meta.outputs.version }}"
 
       - name: Build (Release)
         shell: pwsh
-        run: cmake --build build --config Release
+        run: cmake --build build
 
       - name: Run tests (Release)
         shell: pwsh

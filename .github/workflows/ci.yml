@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,13 +34,39 @@ jobs:
             git -C third_party/speexdsp checkout 7a158783df74efe7c2d1c6ee8363c1e695c71226
           }
 
+      # The windows-latest image no longer resolves through CMake's Visual Studio
+      # generator detection, so import the MSVC environment explicitly and use Ninja.
+      - name: Setup MSVC environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "vswhere not found at $vswhere"
+          }
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "Visual Studio with the C++ toolchain was not found."
+          }
+          $vcvars = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+          if (-not (Test-Path $vcvars)) {
+            throw "vcvars64.bat not found at $vcvars"
+          }
+          Write-Host "Using MSVC from: $vsPath"
+          cmd /c "`"$vcvars`" >nul 2>&1 && set" | ForEach-Object {
+            $idx = $_.IndexOf('=')
+            if ($idx -gt 0) {
+              $_ | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
+
       - name: Configure CMake
         shell: pwsh
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=Release
 
       - name: Build (Release)
         shell: pwsh
-        run: cmake --build build --config Release
+        run: cmake --build build
 
       - name: Run tests (Release)
         shell: pwsh
