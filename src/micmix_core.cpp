@@ -1756,12 +1756,12 @@ private:
     void Run() {
         ComInit com;
         if (FAILED(com.hr)) {
-            SetStatus(SourceState::Error, "com_init_failed", "COM init failed", "");
+            SetStatus(SourceState::Error, "com_init_failed", "COM 初始化失败", "");
             return;
         }
         int backoff = 1;
         while (!StopRequested()) {
-            SetStatus(SourceState::Starting, "starting", "Starting source", "");
+            SetStatus(SourceState::Starting, "starting", "正在启动音源", "");
             std::string code;
             std::string msg;
             std::string detail;
@@ -1769,10 +1769,10 @@ private:
             try {
                 captureOk = CaptureOnce(code, msg, detail);
             } catch (const std::exception& ex) {
-                SetStatus(SourceState::Error, "capture_exception", "Source capture exception", ex.what());
+                SetStatus(SourceState::Error, "capture_exception", "音源采集异常", ex.what());
                 break;
             } catch (...) {
-                SetStatus(SourceState::Error, "capture_exception", "Source capture exception", "");
+                SetStatus(SourceState::Error, "capture_exception", "音源采集异常", "");
                 break;
             }
             if (captureOk) {
@@ -1781,16 +1781,16 @@ private:
             }
             if (StopRequested()) break;
             if (!IsRetryableFailureCode(code)) {
-                SetStatus(SourceState::Error, code.empty() ? "error" : code, msg.empty() ? "Source error" : msg, detail);
+                SetStatus(SourceState::Error, code.empty() ? "error" : code, msg.empty() ? "音源错误" : msg, detail);
                 break;
             }
-            SetStatus(SourceState::Reacquiring, code.empty() ? "reacquire" : code, msg.empty() ? "Reacquiring source" : msg, detail);
+            SetStatus(SourceState::Reacquiring, code.empty() ? "reacquire" : code, msg.empty() ? "正在重新获取音源" : msg, detail);
             if (WaitReacquireBackoff(backoff)) {
                 break;
             }
             backoff = std::min(backoff * 2, 15);
         }
-        SetStatus(SourceState::Stopped, "stopped", "Source stopped", "");
+        SetStatus(SourceState::Stopped, "stopped", "音源已停止", "");
     }
 };
 
@@ -1809,7 +1809,7 @@ private:
         ComPtr<IMMDeviceEnumerator> enumerator;
         HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator));
         if (FAILED(hr)) {
-            code = "enumerator_failed"; msg = "MMDeviceEnumerator failed"; return false;
+            code = "enumerator_failed"; msg = "音频设备枚举失败"; return false;
         }
         ComPtr<IMMDevice> device;
         if (!settings_.loopbackDeviceId.empty()) {
@@ -1819,29 +1819,29 @@ private:
             hr = enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device);
         }
         if (FAILED(hr) || !device) {
-            code = "device_not_found"; msg = "Loopback device missing"; return false;
+            code = "device_not_found"; msg = "找不到回环设备"; return false;
         }
 
         ComPtr<IAudioClient> client;
         hr = device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(client.GetAddressOf()));
         if (FAILED(hr) || !client) {
-            code = "open_failed"; msg = "Loopback activate failed"; return false;
+            code = "open_failed"; msg = "回环设备激活失败"; return false;
         }
 
         WAVEFORMATEX* wf = nullptr;
         hr = client->GetMixFormat(&wf);
         if (FAILED(hr) || !wf) {
-            code = "format_failed"; msg = "Loopback mix format failed"; return false;
+            code = "format_failed"; msg = "回环混音格式获取失败"; return false;
         }
         auto releaseWf = [&]() { if (wf) { CoTaskMemFree(wf); wf = nullptr; } };
         const bool isFloat = IsFloatFormat(wf);
         const bool isPcm16 = IsPcm16Format(wf);
         if (!isFloat && !isPcm16) {
-            code = "format_unsupported"; msg = "Unsupported loopback format"; releaseWf(); return false;
+            code = "format_unsupported"; msg = "不支持的回环格式"; releaseWf(); return false;
         }
         if (!IsSupportedSourceRate(wf->nSamplesPerSec)) {
             code = "format_unsupported";
-            msg = "Unsupported loopback sample rate";
+            msg = "不支持的回环采样率";
             detail = "sample_rate=" + std::to_string(wf->nSamplesPerSec);
             releaseWf();
             return false;
@@ -1852,7 +1852,7 @@ private:
             initFlags = AUDCLNT_STREAMFLAGS_LOOPBACK;
             hr = client->Initialize(AUDCLNT_SHAREMODE_SHARED, initFlags, 0, 0, wf, nullptr);
             if (FAILED(hr)) {
-                code = "client_init_failed"; msg = "Loopback init failed"; releaseWf(); return false;
+                code = "client_init_failed"; msg = "回环初始化失败"; releaseWf(); return false;
             }
         }
 
@@ -1866,12 +1866,12 @@ private:
         if ((initFlags & AUDCLNT_STREAMFLAGS_EVENTCALLBACK) != 0) {
             event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
             if (!event) {
-                code = "event_failed"; msg = "Loopback event create failed"; releaseWf(); return false;
+                code = "event_failed"; msg = "回环事件创建失败"; releaseWf(); return false;
             }
             hr = client->SetEventHandle(event);
             if (FAILED(hr)) {
                 closeEvent();
-                code = "event_set_failed"; msg = "Loopback event set failed"; releaseWf(); return false;
+                code = "event_set_failed"; msg = "回环事件设置失败"; releaseWf(); return false;
             }
         }
 
@@ -1879,20 +1879,20 @@ private:
         hr = client->GetService(IID_PPV_ARGS(&cap));
         if (FAILED(hr) || !cap) {
             closeEvent();
-            code = "capture_service_failed"; msg = "Loopback capture service failed"; releaseWf(); return false;
+            code = "capture_service_failed"; msg = "回环采集服务失败"; releaseWf(); return false;
         }
         const int resamplerQuality = ResolveResamplerQualitySetting(settings_.resamplerQuality);
         if (!resampler_.Configure(wf->nSamplesPerSec, kTargetRate, resamplerQuality)) {
             closeEvent();
-            code = "resampler_failed"; msg = "Resampler init failed"; releaseWf(); return false;
+            code = "resampler_failed"; msg = "重采样器初始化失败"; releaseWf(); return false;
         }
         const int channels = std::max<int>(1, wf->nChannels);
         hr = client->Start();
         if (FAILED(hr)) {
             closeEvent();
-            code = "start_failed"; msg = "Loopback start failed"; releaseWf(); return false;
+            code = "start_failed"; msg = "回环启动失败"; releaseWf(); return false;
         }
-        SetStatus(SourceState::Running, "running", "Loopback running", "");
+        SetStatus(SourceState::Running, "running", "回环音源运行中", "");
 
         while (!StopRequested()) {
             if (event) {
@@ -1904,7 +1904,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "wait_failed"; msg = "Loopback wait failed"; return false;
+                    code = "wait_failed"; msg = "回环等待失败"; return false;
                 }
             }
             UINT32 nextPacket = 0;
@@ -1913,7 +1913,7 @@ private:
                 client->Stop();
                 closeEvent();
                 releaseWf();
-                code = "packet_failed"; msg = "Packet query failed"; return false;
+                code = "packet_failed"; msg = "音频包查询失败"; return false;
             }
             if (nextPacket == 0) {
                 if (!event) {
@@ -1930,7 +1930,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "buffer_failed"; msg = "Buffer fetch failed"; return false;
+                    code = "buffer_failed"; msg = "缓冲区读取失败"; return false;
                 }
                 monoIn_.resize(frames);
                 if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
@@ -1955,7 +1955,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "resample_failed"; msg = "Resample failed"; return false;
+                    code = "resample_failed"; msg = "重采样失败"; return false;
                 }
                 if (!monoOut_.empty()) Push(monoOut_.data(), monoOut_.size());
                 cap->ReleaseBuffer(frames);
@@ -1964,7 +1964,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "packet_failed"; msg = "Packet query failed"; return false;
+                    code = "packet_failed"; msg = "音频包查询失败"; return false;
                 }
             }
         }
@@ -2070,20 +2070,20 @@ private:
         if (!TryActivateAnyCandidate(client, pid, hr, detail)) {
             if (detail.empty()) {
                 code = "session_not_found";
-                msg = "Waiting for app";
+                msg = "等待应用启动";
                 return false;
             }
             if (hr == E_NOTIMPL || hr == HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED)) {
                 code = "activate_unsupported";
-                msg = "Process capture not supported on this Windows build";
+                msg = "当前 Windows 版本不支持进程采集";
             } else {
                 code = "activate_failed";
-                msg = "Process loopback activation failed";
+                msg = "进程回环激活失败";
             }
             return false;
         }
         if (!pid || !client) {
-            code = "session_not_found"; msg = "Waiting for app"; return false;
+            code = "session_not_found"; msg = "等待应用启动"; return false;
         }
         WAVEFORMATEX* wf = nullptr;
         bool ownsWf = false;
@@ -2137,7 +2137,7 @@ private:
             }
             if (!IsSupportedSourceRate(wf->nSamplesPerSec)) {
                 code = "format_unsupported";
-                msg = "Unsupported app sample rate";
+                msg = "不支持的应用采样率";
                 if (!detail.empty()) {
                     detail += " ";
                 }
@@ -2153,7 +2153,7 @@ private:
                 detail += " ";
             }
             detail += "pid=" + std::to_string(pid) + " init_hr=" + HrToHex(hr);
-            code = "client_init_failed"; msg = "App client init failed"; releaseWf(); return false;
+            code = "client_init_failed"; msg = "应用音频客户端初始化失败"; releaseWf(); return false;
         }
 
         HANDLE event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
@@ -2186,12 +2186,12 @@ private:
                 detail += " ";
             }
             detail += "pid=" + std::to_string(pid) + " service_hr=" + HrToHex(hr);
-            code = "capture_service_failed"; msg = "App capture service failed"; releaseWf(); return false;
+            code = "capture_service_failed"; msg = "应用采集服务失败"; releaseWf(); return false;
         }
         const int resamplerQuality = ResolveResamplerQualitySetting(settings_.resamplerQuality);
         if (!resampler_.Configure(wf->nSamplesPerSec, kTargetRate, resamplerQuality)) {
             closeEvent();
-            code = "resampler_failed"; msg = "Resampler init failed"; releaseWf(); return false;
+            code = "resampler_failed"; msg = "重采样器初始化失败"; releaseWf(); return false;
         }
         const int channels = std::max<int>(1, wf->nChannels);
         hr = client->Start();
@@ -2201,9 +2201,9 @@ private:
                 detail += " ";
             }
             detail += "pid=" + std::to_string(pid) + " start_hr=" + HrToHex(hr);
-            code = "start_failed"; msg = "App start failed"; releaseWf(); return false;
+            code = "start_failed"; msg = "应用音源启动失败"; releaseWf(); return false;
         }
-        SetStatus(SourceState::Running, "running", "App capture running", "");
+        SetStatus(SourceState::Running, "running", "应用音源运行中", "");
 
         while (!StopRequested()) {
             if (event) {
@@ -2213,7 +2213,7 @@ private:
                         client->Stop();
                         closeEvent();
                         releaseWf();
-                        code = "session_lost"; msg = "App process exited"; return false;
+                        code = "session_lost"; msg = "应用进程已退出"; return false;
                     }
                     continue;
                 }
@@ -2221,14 +2221,14 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "wait_failed"; msg = "Event wait failed"; return false;
+                    code = "wait_failed"; msg = "事件等待失败"; return false;
                 }
             } else {
                 if (!IsProcessAlive(pid)) {
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "session_lost"; msg = "App process exited"; return false;
+                    code = "session_lost"; msg = "应用进程已退出"; return false;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(4));
             }
@@ -2238,7 +2238,7 @@ private:
                 client->Stop();
                 closeEvent();
                 releaseWf();
-                code = "packet_failed"; msg = "Packet query failed"; return false;
+                code = "packet_failed"; msg = "音频包查询失败"; return false;
             }
             if (nextPacket == 0) {
                 continue;
@@ -2252,7 +2252,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "buffer_failed"; msg = "Buffer read failed"; return false;
+                    code = "buffer_failed"; msg = "缓冲区读取失败"; return false;
                 }
                 monoIn_.resize(frames);
                 if (flagsRead & AUDCLNT_BUFFERFLAGS_SILENT) {
@@ -2277,7 +2277,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "resample_failed"; msg = "Resample failed"; return false;
+                    code = "resample_failed"; msg = "重采样失败"; return false;
                 }
                 if (!monoOut_.empty()) Push(monoOut_.data(), monoOut_.size());
                 cap->ReleaseBuffer(frames);
@@ -2286,7 +2286,7 @@ private:
                     client->Stop();
                     closeEvent();
                     releaseWf();
-                    code = "packet_failed"; msg = "Packet query failed"; return false;
+                    code = "packet_failed"; msg = "音频包查询失败"; return false;
                 }
             }
         }
@@ -3128,7 +3128,7 @@ bool AudioSourceManager::Start() {
         if (!source_) {
             status_.state = SourceState::Error;
             status_.code = "create_failed";
-            status_.message = "Source creation failed";
+            status_.message = "音源创建失败";
             status_.detail.clear();
             callback = statusFn_;
             callbackState = status_.state;
@@ -3143,7 +3143,7 @@ bool AudioSourceManager::Start() {
                 source_.reset();
                 status_.state = SourceState::Error;
                 status_.code = "thread_start_failed";
-                status_.message = "Source thread start failed";
+                status_.message = "音源线程启动失败";
                 status_.detail.clear();
                 callback = statusFn_;
                 callbackState = status_.state;
@@ -3180,12 +3180,12 @@ void AudioSourceManager::Stop() {
         notifyStopped = (status_.state != SourceState::Stopped);
         status_.state = SourceState::Stopped;
         status_.code = "stopped";
-        status_.message = "Source stopped";
+        status_.message = "音源已停止";
         status_.detail.clear();
         callback = statusFn_;
     }
     if (notifyStopped && callback) {
-        callback(SourceState::Stopped, "stopped", "Source stopped", "");
+        callback(SourceState::Stopped, "stopped", "音源已停止", "");
     }
 }
 

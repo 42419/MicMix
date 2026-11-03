@@ -395,6 +395,10 @@ std::wstring NormalizeDeviceName(std::wstring text) {
     if (defPos != std::wstring::npos) {
         text = text.substr(0, defPos);
     }
+    const size_t defPosZh = text.find(L"（默认）");
+    if (defPosZh != std::wstring::npos) {
+        text = text.substr(0, defPosZh);
+    }
     while (!text.empty() && iswspace(text.back()) != 0) {
         text.pop_back();
     }
@@ -418,13 +422,13 @@ HINSTANCE GetPluginModuleHandle() {
 void EnsureUiResources() {
     if (!g_brushBg) g_brushBg = CreateSolidBrush(g_theme.bg);
     if (!g_brushCard) g_brushCard = CreateSolidBrush(g_theme.card);
-    if (!g_fontBody) g_fontBody = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (!g_fontSmall) g_fontSmall = CreateFontW(-S(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (!g_fontHint) g_fontHint = CreateFontW(-S(11), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (!g_fontTitle) g_fontTitle = CreateFontW(-S(24), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI Semibold");
-    if (!g_fontTiny) g_fontTiny = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (!g_fontClipInfo) g_fontClipInfo = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (!g_fontControlLarge) g_fontControlLarge = CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    if (!g_fontBody) g_fontBody = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontSmall) g_fontSmall = CreateFontW(-S(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontHint) g_fontHint = CreateFontW(-S(11), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontTitle) g_fontTitle = CreateFontW(-S(24), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontTiny) g_fontTiny = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontClipInfo) g_fontClipInfo = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontControlLarge) g_fontControlLarge = CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
     if (!g_fontMono) g_fontMono = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, L"Consolas");
     EnsureFallbackIcons();
 }
@@ -487,7 +491,7 @@ HeaderStatusBadgeState ResolveHeaderStatusBadgeState(const MicMixSettings& setti
 }
 
 struct HeaderBadgeVisual {
-    const wchar_t* label = L"OFF";
+    const wchar_t* label = L"已关闭";
     COLORREF bg = RGB(134, 150, 173);
     COLORREF border = RGB(102, 118, 141);
     COLORREF text = RGB(255, 255, 255);
@@ -497,11 +501,11 @@ struct HeaderBadgeVisual {
 HeaderBadgeVisual GetHeaderBadgeVisual(HeaderStatusBadgeState state) {
     switch (state) {
     case HeaderStatusBadgeState::Active:
-        return { L"ACTIVE", RGB(21, 171, 88), RGB(9, 133, 63), RGB(255, 255, 255), RGB(224, 255, 234) };
+        return { L"已启用", RGB(21, 171, 88), RGB(9, 133, 63), RGB(255, 255, 255), RGB(224, 255, 234) };
     case HeaderStatusBadgeState::Muted:
-        return { L"MUTED", RGB(227, 149, 19), RGB(181, 113, 6), RGB(255, 255, 255), RGB(255, 240, 213) };
+        return { L"已静音", RGB(227, 149, 19), RGB(181, 113, 6), RGB(255, 255, 255), RGB(255, 240, 213) };
     case HeaderStatusBadgeState::Error:
-        return { L"ERROR", RGB(214, 61, 53), RGB(166, 36, 29), RGB(255, 255, 255), RGB(255, 226, 223) };
+        return { L"错误", RGB(214, 61, 53), RGB(166, 36, 29), RGB(255, 255, 255), RGB(255, 226, 223) };
     default:
         return {};
     }
@@ -516,7 +520,7 @@ void UpdateWindowTitleState(HWND hwnd, bool active) {
     }
     g_windowTitleStateValid = true;
     g_windowTitleActive = active;
-    SetWindowTextW(hwnd, active ? L"MicMix Settings - ACTIVE" : L"MicMix Settings - OFF");
+    SetWindowTextW(hwnd, active ? L"MicMix 设置 - 已启用" : L"MicMix 设置 - 已关闭");
 }
 
 void UpdateHeaderStatusBadgeState(HWND hwnd, const MicMixSettings& settings, const SourceStatus& status) {
@@ -607,15 +611,15 @@ void UpdateMusicMeter(HWND hwnd) {
     }
 
     if (!meterActive) {
-        SetStaticTextIfChanged(txt, g_lastMusicMeterText, L"No signal");
+        SetStaticTextIfChanged(txt, g_lastMusicMeterText, L"无信号");
     } else {
-        const wchar_t* grade = L"OK";
+        const wchar_t* grade = L"正常";
         if (shownPeakDb > -8.0f) {
-            grade = L"Hot";
+            grade = L"偏高";
         } else if (shownPeakDb > -16.0f) {
-            grade = L"Warm";
+            grade = L"偏热";
         } else if (shownPeakDb < -35.0f) {
-            grade = L"Quiet";
+            grade = L"偏弱";
         }
         wchar_t meter[96];
         swprintf_s(meter, L"%.1f dBFS  |  %s", shownPeakDb, grade);
@@ -671,15 +675,15 @@ void UpdateMicMeter(HWND hwnd) {
     }
 
     if (t.micRmsDbfs <= -119.0f) {
-        SetStaticTextIfChanged(txt, g_lastMicMeterText, L"No signal");
+        SetStaticTextIfChanged(txt, g_lastMicMeterText, L"无信号");
     } else {
-        const wchar_t* grade = L"OK";
+        const wchar_t* grade = L"正常";
         if (t.micPeakDbfs > -8.0f) {
-            grade = L"Hot";
+            grade = L"偏高";
         } else if (t.micPeakDbfs > -16.0f) {
-            grade = L"Warm";
+            grade = L"偏热";
         } else if (t.micPeakDbfs < -35.0f) {
-            grade = L"Quiet";
+            grade = L"偏弱";
         }
         wchar_t meter[96];
         swprintf_s(meter, L"%.1f dBFS  |  %s", t.micRmsDbfs, grade);
@@ -718,7 +722,7 @@ void UpdateMonitorButton(HWND hwnd) {
         return;
     }
     const bool enabled = MicMixApp::Instance().IsMonitorEnabled();
-    SetWindowTextW(btn, enabled ? L"Monitor Mix: On" : L"Monitor Mix: Off");
+    SetWindowTextW(btn, enabled ? L"监听混音：开" : L"监听混音：关");
 }
 
 void UpdateGainLabel(HWND hwnd) {
@@ -784,7 +788,7 @@ std::wstring VkToText(UINT vk) {
 
 std::wstring FormatHotkeyText(UINT mods, UINT vk) {
     if (vk == 0) {
-        return L"Not set";
+        return L"未设置";
     }
     std::wstring out;
     if ((mods & MOD_CONTROL) != 0) out += L"Ctrl + ";
@@ -811,7 +815,7 @@ void UpdateMuteHotkeyLabel(HWND hwnd) {
     if (!label) {
         return;
     }
-    const std::wstring text = L"Current: " + FormatHotkeyText(g_muteHotkeyModifiers, g_muteHotkeyVk);
+    const std::wstring text = L"当前：" + FormatHotkeyText(g_muteHotkeyModifiers, g_muteHotkeyVk);
     SetWindowTextW(label, text.c_str());
 }
 
@@ -823,7 +827,7 @@ void UpdateMicInputMuteHotkeyLabel(HWND hwnd) {
     if (!label) {
         return;
     }
-    const std::wstring text = L"Current: " + FormatHotkeyText(g_micInputMuteHotkeyModifiers, g_micInputMuteHotkeyVk);
+    const std::wstring text = L"当前：" + FormatHotkeyText(g_micInputMuteHotkeyModifiers, g_micInputMuteHotkeyVk);
     SetWindowTextW(label, text.c_str());
 }
 
@@ -842,7 +846,7 @@ void BeginHotkeyCapture(HWND hwnd, HotkeyCaptureTarget target) {
         labelId = IDC_MIC_INPUT_HOTKEY_TEXT;
     }
     if (labelId != 0) {
-        SetWindowTextW(GetDlgItem(hwnd, labelId), L"Current: Press key... (Esc=Cancel, Del=Clear)");
+        SetWindowTextW(GetDlgItem(hwnd, labelId), L"当前：请按键...（Esc 取消，Del 清除）");
     }
     SetFocus(hwnd);
 }
@@ -914,7 +918,7 @@ void RequestSourceRefresh(HWND hwnd, bool reloadSettings) {
     if (refreshBtn) {
         EnableWindow(refreshBtn, FALSE);
     }
-    SetStatusText(hwnd, L"Refreshing source list...");
+    SetStatusText(hwnd, L"正在刷新音源列表...");
 
     if (g_sourceRefreshInFlight.exchange(true, std::memory_order_acq_rel)) {
         g_sourceRefreshPending.store(true, std::memory_order_release);
@@ -928,7 +932,7 @@ void RequestSourceRefresh(HWND hwnd, bool reloadSettings) {
         if (refreshBtn) {
             EnableWindow(refreshBtn, TRUE);
         }
-        SetStatusText(hwnd, L"Refresh failed to start");
+        SetStatusText(hwnd, L"刷新启动失败");
     }
 }
 
@@ -957,15 +961,15 @@ void PopulateCombos(HWND hwnd) {
     HWND source = GetDlgItem(hwnd, IDC_SOURCE);
     SendMessageW(source, CB_RESETCONTENT, 0, 0);
 
-    addStaticItem(source, L"Audio Channels:", kSourceItemHeader);
+    addStaticItem(source, L"音频输出设备：", kSourceItemHeader);
     if (g_loopbacks.empty()) {
-        addStaticItem(source, L"  (no audio channels found)", kSourceItemPlaceholder);
+        addStaticItem(source, L"  （未找到音频设备）", kSourceItemPlaceholder);
     } else {
         for (const auto& d : g_loopbacks) {
             std::wstring label = L"  ";
             label += Utf8ToWide(d.name);
             if (d.isDefault) {
-                label += L" (Default)";
+                label += L" （默认）";
             }
             SourceChoice choice{};
             choice.type = SourceChoiceType::Loopback;
@@ -975,9 +979,9 @@ void PopulateCombos(HWND hwnd) {
     }
 
     addStaticItem(source, L"------------------------------", kSourceItemDivider);
-    addStaticItem(source, L"Running Apps:", kSourceItemHeader);
+    addStaticItem(source, L"运行中的应用：", kSourceItemHeader);
     if (g_apps.empty()) {
-        addStaticItem(source, L"  (no running app found)", kSourceItemPlaceholder);
+        addStaticItem(source, L"  （未找到运行中的应用）", kSourceItemPlaceholder);
     } else {
         for (const auto& p : g_apps) {
             std::wstring label = L"  ";
@@ -1000,7 +1004,7 @@ void PopulateCombos(HWND hwnd) {
         for (const auto& d : g_captureDevices) {
             std::wstring label = Utf8ToWide(d.name);
             if (d.isDefault) {
-                label += L" (Default)";
+                label += L" （默认）";
             }
             SendMessageW(mic, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
         }
@@ -1137,6 +1141,16 @@ MicMixSettings CollectSettings(HWND hwnd) {
     return s;
 }
 
+const char* SourceStateToChinese(SourceState state) {
+    switch (state) {
+    case SourceState::Starting: return "正在启动";
+    case SourceState::Running: return "运行中";
+    case SourceState::Reacquiring: return "重新获取中";
+    case SourceState::Error: return "错误";
+    default: return "已停止";
+    }
+}
+
 void UpdateStatus(HWND hwnd, bool includeDetails = true) {
     auto& app = MicMixApp::Instance();
     const TelemetrySnapshot t = app.GetTelemetry();
@@ -1144,13 +1158,13 @@ void UpdateStatus(HWND hwnd, bool includeDetails = true) {
 
     if (t.sourceClipEvents != g_lastMusicClipEvents) {
         wchar_t clipMusic[64]{};
-        swprintf_s(clipMusic, L"CLIP Events: %llu", static_cast<unsigned long long>(t.sourceClipEvents));
+        swprintf_s(clipMusic, L"削波次数：%llu", static_cast<unsigned long long>(t.sourceClipEvents));
         SetWindowTextW(GetDlgItem(hwnd, IDC_MUSIC_CLIP_EVENTS), clipMusic);
         g_lastMusicClipEvents = t.sourceClipEvents;
     }
     if (t.micClipEvents != g_lastMicClipEvents) {
         wchar_t clipMic[64]{};
-        swprintf_s(clipMic, L"CLIP Events: %llu", static_cast<unsigned long long>(t.micClipEvents));
+        swprintf_s(clipMic, L"削波次数：%llu", static_cast<unsigned long long>(t.micClipEvents));
         SetWindowTextW(GetDlgItem(hwnd, IDC_MIC_CLIP_EVENTS), clipMic);
         g_lastMicClipEvents = t.micClipEvents;
     }
@@ -1175,23 +1189,23 @@ void UpdateStatus(HWND hwnd, bool includeDetails = true) {
         SetOwnerCheckboxValue(IDC_MIC_INPUT_MUTE, s.micInputMuted);
         InvalidateRect(GetDlgItem(hwnd, IDC_MIC_INPUT_MUTE), nullptr, TRUE);
     }
-    std::string line1 = "State: " + SourceStateToString(st.state) + "  |  " + (st.message.empty() ? "idle" : st.message);
+    std::string line1 = std::string("状态：") + SourceStateToChinese(st.state) + "  |  " + (st.message.empty() ? "空闲" : st.message);
     if (!st.detail.empty()) {
         line1 += "  (" + st.detail + ")";
     }
     const float shownSendPeakDb = (t.musicSendPeakDbfs > -119.0f) ? t.musicSendPeakDbfs : t.musicPeakDbfs;
     char micBuf[32]{};
-    sprintf_s(micBuf, "mic=%.1fdB", t.micRmsDbfs);
+    sprintf_s(micBuf, "麦克风=%.1fdB", t.micRmsDbfs);
     char sendBuf[64]{};
-    sprintf_s(sendBuf, "send=%.1fdB src=%.1fdB", shownSendPeakDb, t.musicPeakDbfs);
-    const std::string resamplerText = (s.resamplerQuality < 0) ? "auto-cpu" : std::to_string(s.resamplerQuality);
-    std::string line2 = "underrun=" + std::to_string(t.underruns) +
-        "  overrun=" + std::to_string(t.overruns) +
-        "  clip=" + std::to_string(t.clippedSamples) +
-        "  resampler=" + resamplerText +
-        "  " + micBuf +
-        "  " + sendBuf +
-        "  tag.micmix_active=" + std::to_string(t.musicActive ? 1 : 0);
+    sprintf_s(sendBuf, "发送=%.1fdB 源=%.1fdB", shownSendPeakDb, t.musicPeakDbfs);
+    const std::string resamplerText = (s.resamplerQuality < 0) ? "自动" : std::to_string(s.resamplerQuality);
+    std::string line2 = "欠载=" + std::to_string(t.underruns) +
+        " 溢出=" + std::to_string(t.overruns) +
+        " 削波=" + std::to_string(t.clippedSamples) +
+        " 重采样=" + resamplerText +
+        " " + micBuf +
+        " " + sendBuf +
+        " tag.micmix_active=" + std::to_string(t.musicActive ? 1 : 0);
     SetStatusText(hwnd, Utf8ToWide(line1 + "\r\n" + line2));
     UpdateMonitorButton(hwnd);
 }
@@ -1611,7 +1625,7 @@ void DrawClipStrip(HDC hdc, const RECT& rcStrip, float dangerUnit, bool clipRece
     SetTextColor(drawDc, clipRecent ? RGB(132, 24, 24) : RGB(112, 120, 132));
     SelectObject(drawDc, g_fontTiny ? g_fontTiny : (g_fontHint ? g_fontHint : g_fontSmall));
     RECT labelRc{ rc.left + S(5), rc.top, rc.right - S(52), rc.bottom };
-    DrawTextW(drawDc, L"Clip Meter", -1, &labelRc, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+    DrawTextW(drawDc, L"削波表", -1, &labelRc, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
     RECT inner{ rc.left + 1, rc.top + 1, rc.right - 1, rc.bottom - 1 };
     RECT pulse{};
@@ -1624,7 +1638,7 @@ void DrawClipStrip(HDC hdc, const RECT& rcStrip, float dangerUnit, bool clipRece
     if (clipRecent) {
         SetTextColor(drawDc, RGB(255, 255, 255));
         SelectObject(drawDc, g_fontTiny ? g_fontTiny : (g_fontHint ? g_fontHint : g_fontSmall));
-        const wchar_t* tag = L"CLIP";
+        const wchar_t* tag = L"削波";
         DrawTextW(drawDc, tag, -1, &pulse, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
     }
 
@@ -1805,7 +1819,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         g_headerStatusBadgeState = HeaderStatusBadgeState::Off;
         g_windowTitleActive = false;
         g_windowTitleStateValid = false;
-        const std::wstring versionText = Utf8ToWide(std::string("v") + MICMIX_VERSION + "  by dabinuss");
+        const std::wstring versionText = Utf8ToWide(std::string("v") + MICMIX_VERSION + "  作者 dabinuss");
 
         const int contentLeft = S(kCardMarginPx + kCardInnerPaddingPx);
         const int contentRight = S(kClientWidthPx - kCardMarginPx - kCardInnerPaddingPx);
@@ -1845,7 +1859,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             SelectObject(measureDc, g_fontSmall ? g_fontSmall : g_fontBody);
             SIZE badgeTextSize{};
-            if (GetTextExtentPoint32W(measureDc, L"ACTIVE", 6, &badgeTextSize) != 0) {
+            if (GetTextExtentPoint32W(measureDc, L"已启用", 3, &badgeTextSize) != 0) {
                 headerBadgeW = std::clamp(static_cast<int>(badgeTextSize.cx) + S(28), S(78), S(108));
             }
             SelectObject(measureDc, oldFont);
@@ -1856,36 +1870,36 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         const int statusX = contentLeft;
         const int statusY = S(704);
         const int statusW = contentRight - statusX;
-        const int statusH = S(44);
+        const int statusH = S(60);
         g_rcHeaderBadge = { headerBadgeX, headerBadgeY, headerBadgeX + headerBadgeW, headerBadgeY + headerBadgeH };
         g_rcStatus = { statusX, statusY, statusX + statusW, statusY + statusH };
 
         CreateWindowW(L"STATIC", L"MicMix", WS_CHILD | WS_VISIBLE, titleX, titleY, titleW, titleH, hwnd, reinterpret_cast<HMENU>(IDC_TITLE), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Configure MicMix and route one audio source to your mic output", WS_CHILD | WS_VISIBLE, contentLeft, S(43), headerMetaX - contentLeft - S(8), S(24), hwnd, reinterpret_cast<HMENU>(IDC_SUBTITLE), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"配置 MicMix，把一路音频混入你的麦克风输出", WS_CHILD | WS_VISIBLE, contentLeft, S(43), headerMetaX - contentLeft - S(8), S(24), hwnd, reinterpret_cast<HMENU>(IDC_SUBTITLE), nullptr, nullptr);
         CreateWindowW(L"STATIC", versionText.c_str(), WS_CHILD | WS_VISIBLE | SS_RIGHT, headerMetaX, S(18), headerMetaW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_VERSION), nullptr, nullptr);
         CreateWindowW(L"STATIC", L"github.com/dabinuss/MicMix", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_NOTIFY, headerMetaX, S(36), headerMetaW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_REPO_LINK), nullptr, nullptr);
 
-        CreateWindowW(L"BUTTON", L"Enable MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_START), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Disable MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + actionButtonW + controlGap, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_STOP), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Restart Source", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 2, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_SAVE), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Monitor Mix: Off", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 3, S(108), monitorButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Only while connected", WS_CHILD | WS_VISIBLE, contentLeft + (actionButtonW + controlGap) * 3, S(108) + hintTopOffset, S(162), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR_HINT), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Auto-enable when TeamSpeak starts", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, contentLeft, S(170), S(320), S(28), hwnd, reinterpret_cast<HMENU>(IDC_AUTOSTART), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"启用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_START), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"停用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + actionButtonW + controlGap, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_STOP), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"重启音源", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 2, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_SAVE), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"监听混音：关", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 3, S(108), monitorButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, contentLeft + (actionButtonW + controlGap) * 3, S(108) + hintTopOffset, S(162), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR_HINT), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"TeamSpeak 启动时自动启用", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, contentLeft, S(170), S(320), S(28), hwnd, reinterpret_cast<HMENU>(IDC_AUTOSTART), nullptr, nullptr);
 
-        CreateWindowW(L"STATIC", L"Audio Source", WS_CHILD | WS_VISIBLE, labelX, S(252), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音频来源", WS_CHILD | WS_VISIBLE, labelX, S(252), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
         HWND source = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS, fieldX, S(248), sourceW, S(360), hwnd, reinterpret_cast<HMENU>(IDC_SOURCE), nullptr, nullptr);
         SendMessageW(source, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), S(24));
         SendMessageW(source, CB_SETITEMHEIGHT, 0, S(22));
         SendMessageW(source, CB_SETMINVISIBLE, 18, 0);
-        CreateWindowW(L"BUTTON", L"Refresh", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX + sourceW + controlGap, S(248), refreshButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_RESCAN), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"刷新", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX + sourceW + controlGap, S(248), refreshButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_RESCAN), nullptr, nullptr);
 
-        CreateWindowW(L"STATIC", L"Audio Output (Mic)", WS_CHILD | WS_VISIBLE, labelX, S(296), S(140), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风设备", WS_CHILD | WS_VISIBLE, labelX, S(296), S(140), S(24), hwnd, nullptr, nullptr, nullptr);
         HWND mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST, fieldX, S(292), micComboW, S(240), hwnd, reinterpret_cast<HMENU>(IDC_MIC_DEVICE), nullptr, nullptr);
         SendMessageW(mic, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), S(24));
         SendMessageW(mic, CB_SETITEMHEIGHT, 0, S(22));
         SendMessageW(mic, CB_SETMINVISIBLE, 12, 0);
 
-        CreateWindowW(L"STATIC", L"Music Volume", WS_CHILD | WS_VISIBLE, labelX, S(388), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐音量", WS_CHILD | WS_VISIBLE, labelX, S(388), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
         HWND gain = CreateWindowW(
             TRACKBAR_CLASSW,
             L"",
@@ -1905,28 +1919,28 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         SendMessageW(gain, TBM_SETTHUMBLENGTH, static_cast<WPARAM>(S(18)), 0);
         SendMessageW(gain, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
         CreateWindowW(L"STATIC", L"-15.0 dB", WS_CHILD | WS_VISIBLE, valueTextX, S(388), S(102), S(24), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_VALUE), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Max is -2 dB to reduce clipping risk", WS_CHILD | WS_VISIBLE, fieldX, S(414), S(330), S(20), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Music Meter", WS_CHILD | WS_VISIBLE, labelX, S(438), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"上限 -2 dB，以降低削波风险", WS_CHILD | WS_VISIBLE, fieldX, S(414), S(330), S(20), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐电平", WS_CHILD | WS_VISIBLE, labelX, S(438), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
         g_rcMeter = { fieldX, S(436), fieldX + meterW, S(436) + S(28) };
         g_rcMusicClip = { fieldX, S(466), fieldX + meterW, S(466) + S(12) };
-        CreateWindowW(L"STATIC", L"No signal", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(438), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_METER_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"CLIP Events: 0", WS_CHILD | WS_VISIBLE, statusTextX, S(466), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MUSIC_CLIP_EVENTS), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Send music when mic is silent", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(480), forceTxToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Mute mic input", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_MUTE), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Mute music", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, muteMusicToggleX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MUTE), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Music keeps sending even when you are not speaking", WS_CHILD | WS_VISIBLE, fieldX, S(544), S(360), S(18), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Mic Meter", WS_CHILD | WS_VISIBLE, labelX, S(568), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(438), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_METER_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(466), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MUSIC_CLIP_EVENTS), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"麦克风不出声时仍发送音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(480), forceTxToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"静音麦克风", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_MUTE), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"静音音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, muteMusicToggleX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MUTE), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"即使你不说话，音乐也会持续发送", WS_CHILD | WS_VISIBLE, fieldX, S(544), S(360), S(18), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风电平", WS_CHILD | WS_VISIBLE, labelX, S(568), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
         g_rcMicMeter = { fieldX, S(566), fieldX + meterW, S(566) + S(28) };
         g_rcMicClip = { fieldX, S(596), fieldX + meterW, S(596) + S(12) };
-        CreateWindowW(L"STATIC", L"No signal", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(568), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"CLIP Events: 0", WS_CHILD | WS_VISIBLE, statusTextX, S(596), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_CLIP_EVENTS), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Only while connected", WS_CHILD | WS_VISIBLE, fieldX, S(610), S(180), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Music Mute Hotkey", WS_CHILD | WS_VISIBLE, labelX, S(632), S(150), S(24), hwnd, nullptr, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Set...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(628), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_SET), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Current: Not set", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(632), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Mic Input Mute Hotkey", WS_CHILD | WS_VISIBLE, labelX, S(666), S(160), S(24), hwnd, nullptr, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Set...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(662), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_SET), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"Current: Not set", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(666), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(568), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(596), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_CLIP_EVENTS), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, fieldX, S(610), S(180), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐静音热键", WS_CHILD | WS_VISIBLE, labelX, S(632), S(150), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(628), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_SET), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(632), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风静音热键", WS_CHILD | WS_VISIBLE, labelX, S(666), S(160), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(662), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_SET), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(666), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_TEXT), nullptr, nullptr);
 
         ApplyControlTheme(hwnd);
         ApplyFonts(hwnd);
@@ -2008,7 +2022,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             const uint64_t nextSeq = g_sourceRefreshSeq.fetch_add(1, std::memory_order_acq_rel) + 1ULL;
             g_sourceRefreshInFlight.store(true, std::memory_order_release);
             g_sourceRefreshActiveSeq.store(nextSeq, std::memory_order_release);
-            SetStatusText(hwnd, L"Refreshing source list...");
+            SetStatusText(hwnd, L"正在刷新音源列表...");
             if (!StartSourceRefreshWorker(hwnd, nextSeq)) {
                 g_sourceRefreshInFlight.store(false, std::memory_order_release);
                 g_sourceRefreshActiveSeq.store(0, std::memory_order_release);
@@ -2016,7 +2030,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (refreshBtn) {
                     EnableWindow(refreshBtn, TRUE);
                 }
-                SetStatusText(hwnd, L"Refresh failed to start");
+                SetStatusText(hwnd, L"刷新启动失败");
             }
             return 0;
         }
@@ -2079,7 +2093,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 IsHotkeyConflict(mods, vk, g_micInputMuteHotkeyModifiers, g_micInputMuteHotkeyVk)) {
                 EndHotkeyCapture(hwnd, false);
                 MessageBeep(MB_ICONWARNING);
-                SetStatusText(hwnd, L"Hotkey conflict: already assigned to Mic Input Mute.");
+                SetStatusText(hwnd, L"热键冲突：已分配给麦克风静音。");
                 UpdateHotkeyLabels(hwnd);
                 return 0;
             }
@@ -2087,7 +2101,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 IsHotkeyConflict(mods, vk, g_muteHotkeyModifiers, g_muteHotkeyVk)) {
                 EndHotkeyCapture(hwnd, false);
                 MessageBeep(MB_ICONWARNING);
-                SetStatusText(hwnd, L"Hotkey conflict: already assigned to Music Mute.");
+                SetStatusText(hwnd, L"热键冲突：已分配给音乐静音。");
                 UpdateHotkeyLabels(hwnd);
                 return 0;
             }
@@ -2106,7 +2120,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_ACTIVATE:
         if (LOWORD(wParam) == WA_INACTIVE && IsCapturingHotkey()) {
             EndHotkeyCapture(hwnd);
-            SetStatusText(hwnd, L"Hotkey capture cancelled.");
+            SetStatusText(hwnd, L"已取消热键录制。");
             return 0;
         }
         return DefWindowProcW(hwnd, msg, wParam, lParam);
@@ -2296,20 +2310,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         SetBkMode(paintDc, TRANSPARENT);
         SetTextColor(paintDc, g_theme.muted);
         SelectObject(paintDc, g_fontSmall);
-        const wchar_t* h1 = L"MICMIX SETTINGS";
-        const wchar_t* h2 = L"AUDIO ROUTING";
-        const wchar_t* h3 = L"MIX BEHAVIOR";
+        const wchar_t* h1 = L"MicMix 设置";
+        const wchar_t* h2 = L"音频路由";
+        const wchar_t* h3 = L"混音行为";
         TextOutW(paintDc, S(36), S(86), h1, lstrlenW(h1));
         TextOutW(paintDc, S(36), S(226), h2, lstrlenW(h2));
         TextOutW(paintDc, S(36), S(358), h3, lstrlenW(h3));
 
         SetBkMode(paintDc, TRANSPARENT);
         SetTextColor(paintDc, RGB(40, 48, 61));
-        HGDIOBJ oldStatusFont = SelectObject(paintDc, g_fontMono ? g_fontMono : (g_fontBody ? g_fontBody : GetStockObject(DEFAULT_GUI_FONT)));
+        HGDIOBJ oldStatusFont = SelectObject(paintDc, g_fontBody ? g_fontBody : (g_fontSmall ? g_fontSmall : GetStockObject(DEFAULT_GUI_FONT)));
         RECT statusRc = g_rcStatus;
         DrawTextW(
             paintDc,
-            g_lastStatusText.empty() ? L"State: Stopped" : g_lastStatusText.c_str(),
+            g_lastStatusText.empty() ? L"状态：已停止" : g_lastStatusText.c_str(),
             -1,
             &statusRc,
             DT_LEFT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK);
@@ -2399,7 +2413,7 @@ void WindowThreadMain() {
     HWND hwnd = CreateWindowExW(
         0,
         wc.lpszClassName,
-        L"MicMix Settings",
+        L"MicMix 设置",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

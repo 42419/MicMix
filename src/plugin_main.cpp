@@ -77,7 +77,7 @@ const char* ts3plugin_author() {
 }
 
 const char* ts3plugin_description() {
-    return "Mixes an additional audio source into captured microphone audio.";
+    return "把额外的音频源混入 TeamSpeak 采集的麦克风音频。";
 }
 
 void ts3plugin_setFunctionPointers(const struct TS3Functions funcs) {
@@ -176,7 +176,7 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
     if (!items) {
         return;
     }
-    items[0] = CreateMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_SETTINGS, "MicMix Settings...", SETTINGS_ICON_FILE);
+    items[0] = CreateMenuItem(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_SETTINGS, "MicMix 设置...", SETTINGS_ICON_FILE);
     if (!items[0]) {
         std::free(items);
         return;
