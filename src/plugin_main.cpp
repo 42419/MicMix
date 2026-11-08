@@ -73,7 +73,7 @@ int ts3plugin_apiVersion() {
 }
 
 const char* ts3plugin_author() {
-    return "Dabinuss";
+    return "Dabinuss / 42419";
 }
 
 const char* ts3plugin_description() {

@@ -1,5 +1,9 @@
 # MicMix
 
+> 本仓库是 [dabinuss/MicMix](https://github.com/dabinuss/MicMix) 的简体中文二改版。
+> 原作者保留全部权利，本人仅做界面本地化与少量缺陷修复，未改变原始许可状态。
+> 上游仓库未声明开源许可证，因此本仓库不构成任何再许可。
+
 ## Important Disclaimer
 
 **This project was developed with help from Codex, an AI coding agent by OpenAI.**

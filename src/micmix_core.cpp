@@ -551,7 +551,7 @@ bool IsDigitsOnly(const std::string& value) {
 void SanitizeSettings(MicMixSettings& s) {
     s.configVersion = std::clamp(s.configVersion, 1, 8);
     if (!std::isfinite(s.musicGainDb)) { s.musicGainDb = -15.0f; }
-    s.musicGainDb = std::clamp(s.musicGainDb, -30.0f, -2.0f);
+    s.musicGainDb = std::clamp(s.musicGainDb, -100.0f, -2.0f);
     if (s.resamplerQuality < -1) {
         s.resamplerQuality = -1;
     } else if (s.resamplerQuality > 10) {
@@ -1184,7 +1184,7 @@ float AudioEngine::DbToLinear(float db) {
 }
 
 void AudioEngine::ApplySettings(const MicMixSettings& settings) {
-    const float gainDb = std::clamp(settings.musicGainDb, -30.0f, -2.0f);
+    const float gainDb = std::clamp(settings.musicGainDb, -100.0f, -2.0f);
     const int bufferMs = std::clamp(settings.bufferTargetMs, 20, 250);
     const bool wasMuted = musicMuted_.exchange(settings.musicMuted, std::memory_order_acq_rel);
     if (settings.musicMuted && !wasMuted) {

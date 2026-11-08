@@ -12,6 +12,8 @@
 #include <atomic>
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
+#include <cwchar>
 #include <cwctype>
 #include <exception>
 #include <limits>
@@ -63,6 +65,7 @@ enum ControlId {
     IDC_REPO_LINK = 1032,
     IDC_MUSIC_CLIP_EVENTS = 1033,
     IDC_MIC_CLIP_EVENTS = 1034,
+    IDC_GAIN_UNIT = 1035,
 };
 
 enum class SourceChoiceType {
@@ -114,6 +117,9 @@ int g_lastValidSourceSel = -1;
 UiTheme g_theme;
 int g_dpi = 96;
 bool g_loadingUi = false;
+bool g_gainEditActive = false;
+constexpr UINT_PTR kGainEditSubclassId = 0x4D58;
+constexpr UINT_PTR kGainSliderSubclassId = 0x4D59;
 int g_hotkeyRefreshTick = 0;
 HotkeyCaptureTarget g_hotkeyCaptureTarget = HotkeyCaptureTarget::None;
 UINT g_muteHotkeyModifiers = 0;
@@ -150,17 +156,17 @@ constexpr UINT kStatusTimerIntervalMs = 40;
 constexpr int kStatusDetailsEveryTicks = 3;
 constexpr int kHotkeyLabelRefreshEveryTicks = 6;
 constexpr UINT kDebouncedSaveMs = 300;
-constexpr float kMusicGainMinDb = -30.0f;
+constexpr float kMusicGainMinDb = -100.0f;
 constexpr float kMusicGainMaxDb = -2.0f;
 constexpr int kMusicGainStepPerDb = 10;
 constexpr int kMusicGainSliderMax = static_cast<int>((kMusicGainMaxDb - kMusicGainMinDb) * static_cast<float>(kMusicGainStepPerDb));
 constexpr int kSourceIconSizePx = 16;
 constexpr int kClientWidthPx = 680;
-constexpr int kClientHeightPx = 780;
+constexpr int kClientHeightPx = 700;
 constexpr int kCardMarginPx = 16;
-constexpr int kCardGapPx = 12;
+constexpr int kCardGapPx = 8;
 constexpr int kCardInnerPaddingPx = 20;
-constexpr wchar_t kRepoUrl[] = L"https://github.com/dabinuss/MicMix";
+constexpr wchar_t kRepoUrl[] = L"https://github.com/42419/MicMix";
 
 HFONT g_fontBody = nullptr;
 HFONT g_fontSmall = nullptr;
@@ -422,13 +428,13 @@ HINSTANCE GetPluginModuleHandle() {
 void EnsureUiResources() {
     if (!g_brushBg) g_brushBg = CreateSolidBrush(g_theme.bg);
     if (!g_brushCard) g_brushCard = CreateSolidBrush(g_theme.card);
-    if (!g_fontBody) g_fontBody = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
-    if (!g_fontSmall) g_fontSmall = CreateFontW(-S(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
-    if (!g_fontHint) g_fontHint = CreateFontW(-S(11), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
-    if (!g_fontTitle) g_fontTitle = CreateFontW(-S(24), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontBody) g_fontBody = CreateFontW(-S(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontSmall) g_fontSmall = CreateFontW(-S(11), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontHint) g_fontHint = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontTitle) g_fontTitle = CreateFontW(-S(22), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
     if (!g_fontTiny) g_fontTiny = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
     if (!g_fontClipInfo) g_fontClipInfo = CreateFontW(-S(10), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
-    if (!g_fontControlLarge) g_fontControlLarge = CreateFontW(-S(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
+    if (!g_fontControlLarge) g_fontControlLarge = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
     if (!g_fontMono) g_fontMono = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, L"Consolas");
     EnsureFallbackIcons();
 }
@@ -726,10 +732,13 @@ void UpdateMonitorButton(HWND hwnd) {
 }
 
 void UpdateGainLabel(HWND hwnd) {
+    if (g_gainEditActive) {
+        return;
+    }
     const int slider = static_cast<int>(SendMessageW(GetDlgItem(hwnd, IDC_GAIN), TBM_GETPOS, 0, 0));
     const float db = SliderToGainDb(slider);
     wchar_t buf[64];
-    swprintf_s(buf, L"%+.1f dB", db);
+    swprintf_s(buf, L"%+.1f", db);
     SetWindowTextW(GetDlgItem(hwnd, IDC_GAIN_VALUE), buf);
 }
 
@@ -1237,6 +1246,136 @@ void ApplyLiveSettings(HWND hwnd, bool restartSource, bool saveImmediately = tru
     UpdateStatus(hwnd);
 }
 
+void CommitGainEdit(HWND hwnd) {
+    HWND edit = GetDlgItem(hwnd, IDC_GAIN_VALUE);
+    HWND slider = GetDlgItem(hwnd, IDC_GAIN);
+    if (!edit || !slider) {
+        return;
+    }
+    wchar_t buf[64]{};
+    GetWindowTextW(edit, buf, static_cast<int>(std::size(buf)));
+    wchar_t* end = nullptr;
+    const double parsed = std::wcstod(buf, &end);
+    bool valid = (end != buf);
+    if (valid) {
+        // Accept an optional trailing unit, e.g. "-45 dB".
+        while (end && *end != L'\0' &&
+               (iswspace(*end) != 0 || *end == L'd' || *end == L'D' || *end == L'b' || *end == L'B')) {
+            ++end;
+        }
+        valid = (end != nullptr && *end == L'\0') && std::isfinite(parsed);
+    }
+    g_gainEditActive = false;
+    if (valid) {
+        SendMessageW(slider, TBM_SETPOS, TRUE, GainDbToSlider(static_cast<float>(parsed)));
+    }
+    UpdateGainLabel(hwnd);
+    ApplyLiveSettings(hwnd, false, false);
+}
+
+LRESULT CALLBACK GainEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+    switch (msg) {
+    case WM_CHAR:
+        if (wParam == L'\r') {
+            CommitGainEdit(GetParent(hwnd));
+            return 0;
+        }
+        if (wParam == L'\x1b') {
+            g_gainEditActive = false;
+            UpdateGainLabel(GetParent(hwnd));
+            return 0;
+        }
+        if (wParam < 32) {
+            break;
+        }
+        if (wcschr(L"0123456789.-+", static_cast<wchar_t>(wParam)) == nullptr) {
+            return 0;
+        }
+        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_RETURN) {
+            CommitGainEdit(GetParent(hwnd));
+            return 0;
+        }
+        if (wParam == VK_ESCAPE) {
+            g_gainEditActive = false;
+            UpdateGainLabel(GetParent(hwnd));
+            return 0;
+        }
+        break;
+    case WM_SETFOCUS:
+        SendMessageW(hwnd, EM_SETSEL, 0, -1);
+        break;
+    default:
+        break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
+int GainSliderValueFromPoint(HWND hwnd, int x, bool snapToTick) {
+    RECT channel{};
+    SendMessageW(hwnd, TBM_GETCHANNELRECT, 0, reinterpret_cast<LPARAM>(&channel));
+    const int channelW = channel.right - channel.left;
+    if (channelW <= 0) {
+        return -1;
+    }
+    const int thumb = static_cast<int>(SendMessageW(hwnd, TBM_GETTHUMBLENGTH, 0, 0));
+    const int usable = std::max(1, channelW - thumb);
+    const int rel = std::clamp<int>(x - static_cast<int>(channel.left) - (thumb / 2), 0, usable);
+    const int minPos = static_cast<int>(SendMessageW(hwnd, TBM_GETRANGEMIN, 0, 0));
+    const int maxPos = static_cast<int>(SendMessageW(hwnd, TBM_GETRANGEMAX, 0, 0));
+    int value = minPos + MulDiv(rel, maxPos - minPos, usable);
+    if (snapToTick) {
+        // Ticks are drawn every 10 dB; a click should land exactly on the nearest one.
+        constexpr int kTickStep = 100;
+        value = ((value + (kTickStep / 2)) / kTickStep) * kTickStep;
+    }
+    return std::clamp(value, minPos, maxPos);
+}
+
+LRESULT CALLBACK GainSliderSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+    switch (msg) {
+    case WM_LBUTTONDOWN: {
+        const int x = static_cast<short>(LOWORD(lParam));
+        const int y = static_cast<short>(HIWORD(lParam));
+        RECT thumbRect{};
+        SendMessageW(hwnd, TBM_GETTHUMBRECT, 0, reinterpret_cast<LPARAM>(&thumbRect));
+        if (PtInRect(&thumbRect, POINT{ x, y })) {
+            // Grabbing the thumb keeps the native continuous drag behaviour.
+            break;
+        }
+        const int value = GainSliderValueFromPoint(hwnd, x, true);
+        if (value >= 0) {
+            SendMessageW(hwnd, TBM_SETPOS, TRUE, value);
+            SendMessageW(GetParent(hwnd), WM_HSCROLL, MAKEWPARAM(SB_THUMBPOSITION, value), reinterpret_cast<LPARAM>(hwnd));
+            SetFocus(hwnd);
+            SetCapture(hwnd);
+            return 0;
+        }
+        break;
+    }
+    case WM_MOUSEMOVE:
+        if (GetCapture() == hwnd) {
+            const int value = GainSliderValueFromPoint(hwnd, static_cast<short>(LOWORD(lParam)), false);
+            if (value >= 0) {
+                SendMessageW(hwnd, TBM_SETPOS, TRUE, value);
+                SendMessageW(GetParent(hwnd), WM_HSCROLL, MAKEWPARAM(SB_THUMBPOSITION, value), reinterpret_cast<LPARAM>(hwnd));
+            }
+            return 0;
+        }
+        break;
+    case WM_LBUTTONUP:
+        if (GetCapture() == hwnd) {
+            ReleaseCapture();
+            return 0;
+        }
+        break;
+    default:
+        break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 void ApplyControlTheme(HWND hwnd) {
     EnumChildWindows(hwnd, [](HWND child, LPARAM) -> BOOL {
         wchar_t className[32]{};
@@ -1293,6 +1432,8 @@ void ApplyFonts(HWND hwnd) {
     SetControlFont(hwnd, IDC_MONITOR_HINT, g_fontHint ? g_fontHint : g_fontSmall);
     SetControlFont(hwnd, IDC_MIC_METER_HINT, g_fontHint ? g_fontHint : g_fontSmall);
     SetControlFont(hwnd, IDC_GAIN_HINT, g_fontHint ? g_fontHint : g_fontSmall);
+    SetControlFont(hwnd, IDC_GAIN_UNIT, g_fontSmall);
+    SetControlFont(hwnd, IDC_GAIN_VALUE, g_fontBody);
     SetControlFont(hwnd, IDC_FORCE_TX_HINT, g_fontHint ? g_fontHint : g_fontSmall);
 }
 
@@ -1300,8 +1441,8 @@ void ComputeLayout() {
     const int left = S(kCardMarginPx);
     const int right = S(kClientWidthPx - kCardMarginPx);
     const int gap = S(kCardGapPx);
-    g_rcSession = { left, S(82), right, S(210) };
-    g_rcSource = { left, g_rcSession.bottom + gap, right, S(342) };
+    g_rcSession = { left, S(70), right, S(182) };
+    g_rcSource = { left, g_rcSession.bottom + gap, right, S(290) };
     g_rcMix = { left, g_rcSource.bottom + gap, right, S(kClientHeightPx - kCardMarginPx) };
 }
 
@@ -1797,10 +1938,28 @@ void DrawOwnerCheckbox(const DRAWITEMSTRUCT* dis) {
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_CREATE: {
-        g_dpi = GetDpiForWindow(hwnd);
+        const UINT windowDpi = GetDpiForWindow(hwnd);
+        g_dpi = (windowDpi != 0) ? static_cast<int>(windowDpi) : 96;
+        {
+            // The window was sized with the DPI guess available before creation.
+            // If the real DPI differs (or the window landed on a monitor with a
+            // different scale), resize the client area before laying out controls.
+            RECT rc{ 0, 0, S(kClientWidthPx), S(kClientHeightPx) };
+            AdjustWindowRectEx(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, FALSE, 0);
+            RECT current{};
+            if (GetWindowRect(hwnd, &current)) {
+                const int wantW = rc.right - rc.left;
+                const int wantH = rc.bottom - rc.top;
+                if ((current.right - current.left) != wantW || (current.bottom - current.top) != wantH) {
+                    SetWindowPos(hwnd, nullptr, 0, 0, wantW, wantH,
+                                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+                }
+            }
+        }
         EnsureUiResources();
         ComputeLayout();
         g_hotkeyRefreshTick = 0;
+        g_gainEditActive = false;
         g_hotkeyCaptureTarget = HotkeyCaptureTarget::None;
         g_lastMusicClipEvents = std::numeric_limits<uint64_t>::max();
         g_lastMicClipEvents = std::numeric_limits<uint64_t>::max();
@@ -1819,7 +1978,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         g_headerStatusBadgeState = HeaderStatusBadgeState::Off;
         g_windowTitleActive = false;
         g_windowTitleStateValid = false;
-        const std::wstring versionText = Utf8ToWide(std::string("v") + MICMIX_VERSION + "  作者 dabinuss");
+        const std::wstring versionText = Utf8ToWide(std::string("v") + MICMIX_VERSION + "  原作 Dabinuss · 二改 42419");
 
         const int contentLeft = S(kCardMarginPx + kCardInnerPaddingPx);
         const int contentRight = S(kClientWidthPx - kCardMarginPx - kCardInnerPaddingPx);
@@ -1841,7 +2000,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         const int muteToggleW = S(156);
         const int muteToggleGap = S(10);
         const int muteMusicToggleX = fieldX + muteToggleW + muteToggleGap;
-        const int hintTopOffset = S(38);
+        const int hintTopOffset = S(36);
         const int headerMetaW = S(300);
         const int headerMetaX = contentRight - headerMetaW;
         const int headerBadgeH = S(22);
@@ -1868,79 +2027,89 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         const int headerBadgeX = titleX + titleW + S(2);
         const int headerBadgeY = titleY + ((titleH - headerBadgeH) / 2) - S(1);
         const int statusX = contentLeft;
-        const int statusY = S(704);
+        const int statusY = S(632);
         const int statusW = contentRight - statusX;
-        const int statusH = S(60);
+        const int statusH = S(48);
         g_rcHeaderBadge = { headerBadgeX, headerBadgeY, headerBadgeX + headerBadgeW, headerBadgeY + headerBadgeH };
         g_rcStatus = { statusX, statusY, statusX + statusW, statusY + statusH };
 
         CreateWindowW(L"STATIC", L"MicMix", WS_CHILD | WS_VISIBLE, titleX, titleY, titleW, titleH, hwnd, reinterpret_cast<HMENU>(IDC_TITLE), nullptr, nullptr);
         CreateWindowW(L"STATIC", L"配置 MicMix，把一路音频混入你的麦克风输出", WS_CHILD | WS_VISIBLE, contentLeft, S(43), headerMetaX - contentLeft - S(8), S(24), hwnd, reinterpret_cast<HMENU>(IDC_SUBTITLE), nullptr, nullptr);
         CreateWindowW(L"STATIC", versionText.c_str(), WS_CHILD | WS_VISIBLE | SS_RIGHT, headerMetaX, S(18), headerMetaW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_VERSION), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"github.com/dabinuss/MicMix", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_NOTIFY, headerMetaX, S(36), headerMetaW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_REPO_LINK), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"github.com/42419/MicMix", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_NOTIFY, headerMetaX, S(36), headerMetaW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_REPO_LINK), nullptr, nullptr);
 
-        CreateWindowW(L"BUTTON", L"启用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_START), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"停用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + actionButtonW + controlGap, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_STOP), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"重启音源", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 2, S(108), actionButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_SAVE), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"监听混音：关", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 3, S(108), monitorButtonW, S(34), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, contentLeft + (actionButtonW + controlGap) * 3, S(108) + hintTopOffset, S(162), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR_HINT), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"TeamSpeak 启动时自动启用", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, contentLeft, S(170), S(320), S(28), hwnd, reinterpret_cast<HMENU>(IDC_AUTOSTART), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"启用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft, S(94), actionButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_START), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"停用 MicMix", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + actionButtonW + controlGap, S(94), actionButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_STOP), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"重启音源", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 2, S(94), actionButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_SAVE), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"监听混音：关", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, contentLeft + (actionButtonW + controlGap) * 3, S(94), monitorButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, contentLeft + (actionButtonW + controlGap) * 3, S(94) + hintTopOffset, S(162), S(16), hwnd, reinterpret_cast<HMENU>(IDC_MONITOR_HINT), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"TeamSpeak 启动时自动启用", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, contentLeft, S(150), S(320), S(26), hwnd, reinterpret_cast<HMENU>(IDC_AUTOSTART), nullptr, nullptr);
 
-        CreateWindowW(L"STATIC", L"音频来源", WS_CHILD | WS_VISIBLE, labelX, S(252), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
-        HWND source = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS, fieldX, S(248), sourceW, S(360), hwnd, reinterpret_cast<HMENU>(IDC_SOURCE), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音频来源", WS_CHILD | WS_VISIBLE, labelX, S(216), S(130), S(22), hwnd, nullptr, nullptr, nullptr);
+        HWND source = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS, fieldX, S(212), sourceW, S(360), hwnd, reinterpret_cast<HMENU>(IDC_SOURCE), nullptr, nullptr);
         SendMessageW(source, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), S(24));
         SendMessageW(source, CB_SETITEMHEIGHT, 0, S(22));
         SendMessageW(source, CB_SETMINVISIBLE, 18, 0);
-        CreateWindowW(L"BUTTON", L"刷新", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX + sourceW + controlGap, S(248), refreshButtonW, S(30), hwnd, reinterpret_cast<HMENU>(IDC_RESCAN), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"刷新", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX + sourceW + controlGap, S(212), refreshButtonW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_RESCAN), nullptr, nullptr);
 
-        CreateWindowW(L"STATIC", L"麦克风设备", WS_CHILD | WS_VISIBLE, labelX, S(296), S(140), S(24), hwnd, nullptr, nullptr, nullptr);
-        HWND mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST, fieldX, S(292), micComboW, S(240), hwnd, reinterpret_cast<HMENU>(IDC_MIC_DEVICE), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风设备", WS_CHILD | WS_VISIBLE, labelX, S(244), S(140), S(22), hwnd, nullptr, nullptr, nullptr);
+        HWND mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST, fieldX, S(240), micComboW, S(240), hwnd, reinterpret_cast<HMENU>(IDC_MIC_DEVICE), nullptr, nullptr);
         SendMessageW(mic, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), S(24));
         SendMessageW(mic, CB_SETITEMHEIGHT, 0, S(22));
         SendMessageW(mic, CB_SETMINVISIBLE, 12, 0);
 
-        CreateWindowW(L"STATIC", L"音乐音量", WS_CHILD | WS_VISIBLE, labelX, S(388), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐音量", WS_CHILD | WS_VISIBLE, labelX, S(326), S(130), S(22), hwnd, nullptr, nullptr, nullptr);
         HWND gain = CreateWindowW(
             TRACKBAR_CLASSW,
             L"",
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TBS_AUTOTICKS,
             fieldX - gainSliderLeftNudge,
-            S(384),
+            S(322),
             gainSliderW + gainSliderLeftNudge,
             S(30),
             hwnd,
             reinterpret_cast<HMENU>(IDC_GAIN),
             nullptr,
             nullptr);
+        if (gain) {
+            SetWindowSubclass(gain, GainSliderSubclassProc, kGainSliderSubclassId, 0);
+        }
         SendMessageW(gain, TBM_SETRANGE, TRUE, MAKELONG(0, kMusicGainSliderMax));
-        SendMessageW(gain, TBM_SETTICFREQ, 20, 0);
+        SendMessageW(gain, TBM_SETTICFREQ, 100, 0);
         SendMessageW(gain, TBM_SETPAGESIZE, 0, 10);
         SendMessageW(gain, TBM_SETLINESIZE, 0, 1);
         SendMessageW(gain, TBM_SETTHUMBLENGTH, static_cast<WPARAM>(S(18)), 0);
         SendMessageW(gain, WM_CHANGEUISTATE, MAKEWPARAM(UIS_SET, UISF_HIDEFOCUS), 0);
-        CreateWindowW(L"STATIC", L"-15.0 dB", WS_CHILD | WS_VISIBLE, valueTextX, S(388), S(102), S(24), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_VALUE), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"上限 -2 dB，以降低削波风险", WS_CHILD | WS_VISIBLE, fieldX, S(414), S(330), S(20), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"音乐电平", WS_CHILD | WS_VISIBLE, labelX, S(438), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
-        g_rcMeter = { fieldX, S(436), fieldX + meterW, S(436) + S(28) };
-        g_rcMusicClip = { fieldX, S(466), fieldX + meterW, S(466) + S(12) };
-        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(438), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_METER_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(466), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MUSIC_CLIP_EVENTS), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"麦克风不出声时仍发送音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(480), forceTxToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"静音麦克风", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_MUTE), nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"静音音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, muteMusicToggleX, S(512), muteToggleW, S(28), hwnd, reinterpret_cast<HMENU>(IDC_MUTE), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"即使你不说话，音乐也会持续发送", WS_CHILD | WS_VISIBLE, fieldX, S(544), S(360), S(18), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"麦克风电平", WS_CHILD | WS_VISIBLE, labelX, S(568), S(130), S(24), hwnd, nullptr, nullptr, nullptr);
-        g_rcMicMeter = { fieldX, S(566), fieldX + meterW, S(566) + S(28) };
-        g_rcMicClip = { fieldX, S(596), fieldX + meterW, S(596) + S(12) };
-        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(568), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(596), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_CLIP_EVENTS), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, fieldX, S(610), S(180), S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_HINT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"音乐静音热键", WS_CHILD | WS_VISIBLE, labelX, S(632), S(150), S(24), hwnd, nullptr, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(628), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_SET), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(632), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_TEXT), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"麦克风静音热键", WS_CHILD | WS_VISIBLE, labelX, S(666), S(160), S(24), hwnd, nullptr, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(662), S(160), S(30), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_SET), nullptr, nullptr);
-        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(666), S(290), S(24), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_TEXT), nullptr, nullptr);
+        HWND gainValue = CreateWindowW(L"EDIT", L"-15.0",
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | ES_RIGHT | ES_AUTOHSCROLL,
+            valueTextX, S(326), S(64), S(22), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_VALUE), nullptr, nullptr);
+        if (gainValue) {
+            SetWindowSubclass(gainValue, GainEditSubclassProc, kGainEditSubclassId, 0);
+        }
+        CreateWindowW(L"STATIC", L"dB", WS_CHILD | WS_VISIBLE,
+            valueTextX + S(66), S(326), S(30), S(22), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_UNIT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"上限 -2 dB，以降低削波风险", WS_CHILD | WS_VISIBLE, fieldX, S(356), S(330), S(18), hwnd, reinterpret_cast<HMENU>(IDC_GAIN_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐电平", WS_CHILD | WS_VISIBLE, labelX, S(380), S(130), S(22), hwnd, nullptr, nullptr, nullptr);
+        g_rcMeter = { fieldX, S(378), fieldX + meterW, S(378) + S(24) };
+        g_rcMusicClip = { fieldX, S(404), fieldX + meterW, S(404) + S(12) };
+        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(380), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_METER_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(404), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MUSIC_CLIP_EVENTS), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"麦克风不出声时仍发送音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(424), forceTxToggleW, S(26), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"静音麦克风", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, fieldX, S(454), muteToggleW, S(26), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_MUTE), nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"静音音乐", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_TABSTOP, muteMusicToggleX, S(454), muteToggleW, S(26), hwnd, reinterpret_cast<HMENU>(IDC_MUTE), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"即使你不说话，音乐也会持续发送", WS_CHILD | WS_VISIBLE, fieldX, S(484), S(360), S(16), hwnd, reinterpret_cast<HMENU>(IDC_FORCE_TX_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风电平", WS_CHILD | WS_VISIBLE, labelX, S(506), S(130), S(22), hwnd, nullptr, nullptr, nullptr);
+        g_rcMicMeter = { fieldX, S(504), fieldX + meterW, S(504) + S(24) };
+        g_rcMicClip = { fieldX, S(530), fieldX + meterW, S(530) + S(12) };
+        CreateWindowW(L"STATIC", L"无信号", WS_CHILD | WS_VISIBLE | SS_ENDELLIPSIS, statusTextX, S(506), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"削波次数：0", WS_CHILD | WS_VISIBLE, statusTextX, S(530), statusTextW, S(18), hwnd, reinterpret_cast<HMENU>(IDC_MIC_CLIP_EVENTS), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"仅连接时可用", WS_CHILD | WS_VISIBLE, fieldX, S(550), S(180), S(16), hwnd, reinterpret_cast<HMENU>(IDC_MIC_METER_HINT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"音乐静音热键", WS_CHILD | WS_VISIBLE, labelX, S(572), S(150), S(22), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(570), S(160), S(26), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_SET), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(572), S(290), S(22), hwnd, reinterpret_cast<HMENU>(IDC_MUTE_HOTKEY_TEXT), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"麦克风静音热键", WS_CHILD | WS_VISIBLE, labelX, S(600), S(160), S(22), hwnd, nullptr, nullptr, nullptr);
+        CreateWindowW(L"BUTTON", L"设置...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, fieldX, S(598), S(160), S(26), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_SET), nullptr, nullptr);
+        CreateWindowW(L"STATIC", L"当前：未设置", WS_CHILD | WS_VISIBLE, fieldX + S(172), S(600), S(290), S(22), hwnd, reinterpret_cast<HMENU>(IDC_MIC_INPUT_HOTKEY_TEXT), nullptr, nullptr);
 
         ApplyControlTheme(hwnd);
         ApplyFonts(hwnd);
@@ -2132,6 +2301,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 return 0;
             }
             break;
+        case IDC_GAIN_VALUE:
+            if (HIWORD(wParam) == EN_SETFOCUS) {
+                g_gainEditActive = true;
+                return 0;
+            }
+            if (HIWORD(wParam) == EN_KILLFOCUS) {
+                CommitGainEdit(hwnd);
+                return 0;
+            }
+            break;
         case IDC_RESCAN:
             RequestSourceRefresh(hwnd, true);
             return 0;
@@ -2313,9 +2492,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         const wchar_t* h1 = L"MicMix 设置";
         const wchar_t* h2 = L"音频路由";
         const wchar_t* h3 = L"混音行为";
-        TextOutW(paintDc, S(36), S(86), h1, lstrlenW(h1));
-        TextOutW(paintDc, S(36), S(226), h2, lstrlenW(h2));
-        TextOutW(paintDc, S(36), S(358), h3, lstrlenW(h3));
+        TextOutW(paintDc, S(36), S(74), h1, lstrlenW(h1));
+        TextOutW(paintDc, S(36), S(194), h2, lstrlenW(h2));
+        TextOutW(paintDc, S(36), S(302), h3, lstrlenW(h3));
 
         SetBkMode(paintDc, TRANSPARENT);
         SetTextColor(paintDc, RGB(40, 48, 61));
@@ -2409,6 +2588,11 @@ void WindowThreadMain() {
     wc.hbrBackground = nullptr;
     UnregisterClassW(wc.lpszClassName, hInst);
     RegisterClassExW(&wc);
+
+    // Seed the DPI before sizing the window. WM_CREATE re-checks the real window
+    // DPI and resizes if the guess was wrong, so the first open is never clipped.
+    const UINT systemDpi = GetDpiForSystem();
+    g_dpi = (systemDpi != 0) ? static_cast<int>(systemDpi) : 96;
 
     HWND hwnd = CreateWindowExW(
         0,
